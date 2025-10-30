@@ -12,3 +12,20 @@ Teppei Shimamura's lab, Institute of Science Tokyo, Tokyo, Japan
 
 ## Model architecture
 The model comprises three main components: VAE for latent representation of single cells, bulk deconvolution based on DeepCOLOR, and a conditional piecewise constant hazard model for time- and condition-dependent risk estimation.
+
+## Requirements
+Python >= 3.8.16
+
+torch >= 1.13.1
+
+lifelines >= 0.27.8
+
+scanpy >= 1.9.5
+
+pandas >= 1.5.3
+
+numpy >= 1.23.5
+
+matplotlib >= 3.7.2
+
+scipy >= 1.10.1
