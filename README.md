@@ -7,7 +7,7 @@ This enables the computation of patient-level risk scores and the identification
 Teppei Shimamura's lab, Institute of Science Tokyo, Tokyo, Japan
 
 <p align="center">
-  <img src="Overview_github.png" alt="Overview of the scTCHM framework" width="1100">
+  <img src="Overview_git.png" alt="Overview of the scTCHM framework" width="1100">
 </p>
 
 ## Model architecture
