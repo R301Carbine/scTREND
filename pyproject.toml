@@ -7,7 +7,7 @@ name = "sctrend"
 version = "0.1.0"
 description = "scTREND: An annotation-free single-cell time-resolved and condition-dependent hazard model"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.8.16"
 license = { text = "MIT License" }
 authors = [{ name = "Shintaro Yuki", email = "shin1997research@gmail.com" }]
 keywords = ["bioinformatics", "single-cell"]
