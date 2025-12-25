@@ -29,3 +29,22 @@ numpy >= 1.23.5
 matplotlib >= 3.7.2
 
 scipy >= 1.10.1
+
+## Application example
+In this tutorial, we present an application of scTREND using a melanoma single-cell RNA-seq dataset (GSE115978) together with a bulk RNA-seq dataset from TCGA-SKCM.
+BRAF mutation status is incorporated as a driver condition, and the survival time axis is discretized into four time intervals.
+Under this setting, both the coefficients shared across all patients and the coefficients specific to BRAF-mutant patients can be visualized as shown below.
+
+<p align="center">
+  <img src="SKCM_umap_celltype.png" alt="Cell type" width="1100">
+</p>
+
+<p align="center">
+  <img src="umap_beta_per_bin.png" alt="Baseline contribution (beta)" width="1100">
+</p>
+
+<p align="center">
+  <img src="umap_gamma_BRAF_per_bin.png" alt="BRAF-specific contribution (gamma)" width="1100">
+</p>
+
+
