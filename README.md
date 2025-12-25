@@ -35,6 +35,29 @@ In this tutorial, we present an application of scTREND using a melanoma single-c
 BRAF mutation status is incorporated as a driver condition, and the survival time axis is discretized into four time intervals.
 Under this setting, both the coefficients shared across all patients and the coefficients specific to BRAF-mutant patients can be visualized as shown below.
 
+```python
+# driver_genes = ["BRAF"]
+# edges = [...]  # time bin edges used in training
+#
+# sc_adata, bulk_adata = workflow.scTREND_preprocess(sc_adata, bulk_adata,
+#     per=0.01, n_top_genes=5000, highly_variable="bulk", driver_genes=driver_genes)
+#
+# driver_bulk_adata = bulk_adata[:, bulk_adata.var_names.isin(driver_genes)]
+# driver_bulk_adata.layers["SNV"] = ...  # samples × driver_genes (0:wild-type 1:mutated)
+#
+# sc_adata, bulk_adata, model_params_dict, spatial_adata, exp = workflow.run_scTREND(
+#     sc_adata, bulk_adata,
+#     param_save_path="scTREND.pt",
+#     epoch=10000,
+#     batch_key="samples",
+#     driver_genes=driver_genes,
+#     driver_bulk_adata=driver_bulk_adata,
+#     edges=edges
+# )
+
+
+```
+
 <p align="center">
   <img src="SKCM_umap_celltype.png" alt="Cell type" width="1100">
 </p>
