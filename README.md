@@ -30,6 +30,14 @@ matplotlib >= 3.7.2
 
 scipy >= 1.10.1
 
+## Installation
+
+You can install scTREND via pip:
+
+```python
+!pip install sctrend
+```
+
 ## Application example
 In this tutorial, we present an application of scTREND using a melanoma single-cell RNA-seq dataset (GSE115978) together with a bulk RNA-seq dataset from TCGA-SKCM.
 BRAF mutation status is incorporated as a driver condition, and the survival time axis is discretized into four time intervals.
