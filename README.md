@@ -39,6 +39,12 @@ You can install scTREND via pip:
 ```
 
 ## Application example
+
+### Explanation of key functions
+`workflow.scTREND_preprocess`: Preprocesses single-cell and bulk RNA-seq data to identify highly variable genes and prepare the inputs required for scTREND, with optional incorporation of driver-gene information.
+`workflow.run_scTREND`: Runs the scTREND workflow, including model training and estimation of time- and condition-dependent hazard coefficients.
+
+### Running scTREND
 In this tutorial, we present an application of scTREND using a melanoma single-cell RNA-seq dataset (GSE115978) together with a bulk RNA-seq dataset from TCGA-SKCM.
 BRAF mutation status is incorporated as a driver condition, and the survival time axis is discretized into four time intervals.
 Under this setting, both the coefficients shared across all patients and the coefficients specific to BRAF-mutant patients can be visualized as shown below.
@@ -59,8 +65,6 @@ sc_adata, bulk_adata, model_params_dict, spatial_adata, exp = workflow.run_scTRE
      driver_bulk_adata=driver_bulk_adata,
      edges=edges
 )
-
-
 ```
 
 <p align="center">
