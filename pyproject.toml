@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sctrend"
-version = "0.1.0"
+version = "0.1.1"
 description = "scTREND: An annotation-free single-cell time-resolved and condition-dependent hazard model"
 readme = "README.md"
 requires-python = ">=3.8.16"
