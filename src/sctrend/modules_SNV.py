@@ -4,18 +4,20 @@ import torch.nn as nn
 from torch.nn.parameter import Parameter
 from torch.nn import init
 
+
 class LinearGELU(nn.Module):
     def __init__(self, input_dim, output_dim):
         super(LinearGELU, self).__init__()
         self.f = nn.Sequential(
             nn.Linear(input_dim, output_dim),
             nn.LayerNorm(output_dim, elementwise_affine=False),
-            nn.GELU()
+            nn.GELU(),
         )
 
     def forward(self, x):
         h = self.f(x)
         return h
+
 
 class SeqNN(nn.Module):
     def __init__(self, num_steps, dim):
@@ -26,7 +28,8 @@ class SeqNN(nn.Module):
     def forward(self, pre_h):
         post_h = self.f(pre_h)
         return post_h
-    
+
+
 class Encoder(nn.Module):
     def __init__(self, num_h_layers, x_dim, h_dim, z_dim, enc_dist=dist.Normal):
         super(Encoder, self).__init__()
@@ -47,6 +50,7 @@ class Encoder(nn.Module):
         z = qz.rsample()
         return z, qz
 
+
 class Decoder_z(nn.Module):
     def __init__(self, num_h_layers, z_dim, h_dim, x_dim):
         super(Decoder_z, self).__init__()
@@ -62,6 +66,7 @@ class Decoder_z(nn.Module):
         softplus_ld = self.softplus(ld)
         return softplus_ld
 
+
 class Decoder_p_softmax(nn.Module):
     def __init__(self, num_h_layers, z_dim, h_dim, x_dim):
         super(Decoder_p_softmax, self).__init__()
@@ -69,8 +74,7 @@ class Decoder_p_softmax(nn.Module):
         self.seq_nn = SeqNN(num_h_layers - 1, h_dim)
         self.h2ld = nn.Linear(h_dim, x_dim)
         self.softmax = nn.Softmax(dim=1)
-        self.softplus = nn.Softplus()
-    
+
     def forward(self, z):
         pre_h = self.z2h(z)
         post_h = self.seq_nn(pre_h)
@@ -78,14 +82,14 @@ class Decoder_p_softmax(nn.Module):
         ld_t = ld.transpose(0, 1)
         p_softmax = self.softmax(ld_t)
         return p_softmax
-    
+
+
 class Decoder_beta_z(nn.Module):
     def __init__(self, num_h_layers, z_dim, h_dim, x_dim):
         super(Decoder_beta_z, self).__init__()
         self.z2h = LinearGELU(z_dim, h_dim)
         self.seq_nn = SeqNN(num_h_layers - 1, h_dim)
         self.h2ld = nn.Linear(h_dim, x_dim)
-        self.softplus = nn.Softplus()
 
     def forward(self, z):
         pre_h = self.z2h(z)
@@ -93,8 +97,23 @@ class Decoder_beta_z(nn.Module):
         ld = self.h2ld(post_h)
         return ld
 
+
 class scTREND(nn.Module):
-    def __init__(self, bulk_num, spatial_num, batch_onehot_dim, driver_genes, x_dim, z_dim, h_dim, num_enc_z_layers, num_dec_z_layers, num_dec_p_layers, num_dec_b_layers, num_time_bins: int):
+    def __init__(
+        self,
+        bulk_num,
+        spatial_num,
+        batch_onehot_dim,
+        driver_genes,
+        x_dim,
+        z_dim,
+        h_dim,
+        num_enc_z_layers,
+        num_dec_z_layers,
+        num_dec_p_layers,
+        num_dec_b_layers,
+        num_time_bins: int,
+    ):
         super().__init__()
         self.bulk_num = bulk_num
         self.spatial_num = spatial_num
@@ -102,32 +121,39 @@ class scTREND(nn.Module):
         self.dec_z2x = Decoder_z(num_dec_z_layers, z_dim + batch_onehot_dim, h_dim, x_dim)
         self.dec_z2p_bulk = Decoder_p_softmax(num_dec_p_layers, z_dim, h_dim, bulk_num)
         self.dec_z2p_spatial = Decoder_p_softmax(num_dec_p_layers, z_dim, h_dim, spatial_num)
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.softplus = nn.Softplus()
         self.num_dec_b_layers = num_dec_b_layers
-        self.driver_genes = driver_genes
+        self.driver_genes = list(driver_genes) if driver_genes is not None else []
         self.z_dim = z_dim
         self.h_dim = h_dim
         self.log_spatial_coeff = Parameter(torch.Tensor(x_dim))
         self.log_spatial_coeff_add = Parameter(torch.Tensor(x_dim))
-        self.log_spatial_theta=  Parameter(torch.Tensor(x_dim))
+        self.log_spatial_theta = Parameter(torch.Tensor(x_dim))
         self.log_bulk_coeff = Parameter(torch.Tensor(x_dim))
         self.log_bulk_coeff_add = Parameter(torch.Tensor(x_dim))
-        self.log_bulk_theta=  Parameter(torch.Tensor(x_dim))
-        self.logtheta_x =  Parameter(torch.Tensor(x_dim))
-        self.mode = 'sc'
+        self.log_bulk_theta = Parameter(torch.Tensor(x_dim))
+        self.logtheta_x = Parameter(torch.Tensor(x_dim))
+        self.mode = "sc"
         self.num_time_bins = num_time_bins
-        out_dim_gamma = num_time_bins
+
         in_dim = z_dim
         self.dec_beta_z = Decoder_beta_z(num_dec_b_layers, in_dim, h_dim, num_time_bins)
 
-        if driver_genes is not None:
-            self.dec_gammas = nn.ModuleDict({
-                f"dec_gamma_{gene}_z": Decoder_beta_z(
-                    num_dec_b_layers, in_dim, h_dim, out_dim_gamma
-                )
-                for gene in driver_genes
-            })
+        self.dec_gammas = nn.ModuleDict()
+        if len(self.driver_genes) > 0:
+            self.dec_gammas = nn.ModuleDict(
+                {
+                    f"dec_gamma_{gene}_z": Decoder_beta_z(
+                        num_dec_b_layers,
+                        in_dim,
+                        h_dim,
+                        num_time_bins,
+                    )
+                    for gene in self.driver_genes
+                }
+            )
+
         self.reset_parameters_zeros()
 
     def reset_parameters_zeros(self):
@@ -139,46 +165,75 @@ class scTREND(nn.Module):
         init.constant_(self.log_bulk_theta, 0)
         init.constant_(self.logtheta_x, 0)
 
-    def forward(self, x, batch_onehot, time=None, gene_name=None):
-        xb = torch.cat([x, batch_onehot], dim=-1)
-        z, qz = self.enc_z(xb)
-        zb = torch.cat([z, batch_onehot], dim=-1)
-        x_hat = self.dec_z2x(zb)
-        p_bulk = self.dec_z2p_bulk(z)
-        bulk_coeff = self.softplus(self.log_bulk_coeff)
-        bulk_coeff_add = self.softplus(self.log_bulk_coeff_add)
-        bulk_hat = torch.matmul(p_bulk, x_hat * bulk_coeff) + bulk_coeff_add
-        if self.spatial_num == 0:
-            p_spatial = None
-            spatial_coeff = None
-            spatial_coeff_add = None
-            spatial_hat = None
-        else:
-            p_spatial = self.dec_z2p_spatial(z) 
-            spatial_coeff = self.softplus(self.log_spatial_coeff)
-            spatial_coeff_add = self.softplus(self.log_spatial_coeff_add)
-            spatial_hat = torch.matmul(p_spatial, x_hat * spatial_coeff) + spatial_coeff_add
-        theta_x = self.softplus(self.logtheta_x)
-        theta_bulk = self.softplus(self.log_bulk_theta)
-        theta_spatial = self.softplus(self.log_spatial_theta)
-        z_for_beta = z
-        beta_z_all = self.dec_beta_z(z_for_beta)
-        if beta_z_all.dim() == 1:
-            beta_z_all = beta_z_all.unsqueeze(1)
-        if self.driver_genes is None:
-            gamma_z_dict = None
-        elif gene_name is None or gene_name == "all":
+    def _decode_gamma_dict(self, z, gene_name=None):
+        if len(self.dec_gammas) == 0:
+            return None
+
+        if gene_name is None or gene_name == "all":
             gamma_z_dict = {}
             for key, decoder in self.dec_gammas.items():
                 gene = key.replace("dec_gamma_", "").replace("_z", "")
-                gamma_z_dict[gene] = decoder(z_for_beta)
+                gamma_val = decoder(z)
+                if gamma_val.dim() == 1:
+                    gamma_val = gamma_val.unsqueeze(1)
+                gamma_z_dict[gene] = gamma_val
+            return gamma_z_dict
+
+        decoder = self.dec_gammas[f"dec_gamma_{gene_name}_z"]
+        gamma_val = decoder(z)
+        if gamma_val.dim() == 1:
+            gamma_val = gamma_val.unsqueeze(1)
+        return {gene_name: gamma_val}
+
+    def forward(self, x, batch_onehot, time=None, gene_name=None, deterministic_z: bool = False):
+        xb = torch.cat([x, batch_onehot], dim=-1)
+        z_sample, qz = self.enc_z(xb)
+        z = qz.loc if deterministic_z else z_sample
+        zb = torch.cat([z, batch_onehot], dim=-1)
+
+        x_hat = self.dec_z2x(zb)
+        p_bulk = self.dec_z2p_bulk(z)
+
+        bulk_coeff = self.softplus(self.log_bulk_coeff)
+        bulk_coeff_add = self.softplus(self.log_bulk_coeff_add)
+        bulk_hat = torch.matmul(p_bulk, x_hat * bulk_coeff) + bulk_coeff_add
+
+        if self.spatial_num == 0:
+            p_spatial = None
+            spatial_hat = None
         else:
-            decoder = self.dec_gammas[f"dec_gamma_{gene_name}_z"]
-            gamma_z_dict = {gene_name: decoder(z)}
-        return (z, qz, x_hat, p_bulk, p_spatial, bulk_hat, spatial_hat, theta_x, theta_bulk, theta_spatial, beta_z_all, gamma_z_dict)
-    
+            p_spatial = self.dec_z2p_spatial(z)
+            spatial_coeff = self.softplus(self.log_spatial_coeff)
+            spatial_coeff_add = self.softplus(self.log_spatial_coeff_add)
+            spatial_hat = torch.matmul(p_spatial, x_hat * spatial_coeff) + spatial_coeff_add
+
+        theta_x = self.softplus(self.logtheta_x)
+        theta_bulk = self.softplus(self.log_bulk_theta)
+        theta_spatial = self.softplus(self.log_spatial_theta)
+
+        beta_z_all = self.dec_beta_z(z)
+        if beta_z_all.dim() == 1:
+            beta_z_all = beta_z_all.unsqueeze(1)
+
+        gamma_z_dict = self._decode_gamma_dict(z, gene_name=gene_name)
+
+        return (
+            z,
+            qz,
+            x_hat,
+            p_bulk,
+            p_spatial,
+            bulk_hat,
+            spatial_hat,
+            theta_x,
+            theta_bulk,
+            theta_spatial,
+            beta_z_all,
+            gamma_z_dict,
+        )
+
     def sc_mode(self):
-        self.mode = 'sc'
+        self.mode = "sc"
         for parameter in self.parameters():
             parameter.requires_grad = False
         for parameter in self.enc_z.parameters():
@@ -186,9 +241,9 @@ class scTREND(nn.Module):
         for parameter in self.dec_z2x.parameters():
             parameter.requires_grad = True
         self.logtheta_x.requires_grad = True
-    
+
     def bulk_mode(self):
-        self.mode = 'bulk'
+        self.mode = "bulk"
         for parameter in self.parameters():
             parameter.requires_grad = False
         for parameter in self.dec_z2p_bulk.parameters():
@@ -196,9 +251,9 @@ class scTREND(nn.Module):
         self.log_bulk_coeff.requires_grad = True
         self.log_bulk_coeff_add.requires_grad = True
         self.log_bulk_theta.requires_grad = True
-        
+
     def spatial_mode(self):
-        self.mode = 'spatial'
+        self.mode = "spatial"
         for parameter in self.parameters():
             parameter.requires_grad = False
         for parameter in self.dec_z2p_spatial.parameters():
@@ -206,14 +261,27 @@ class scTREND(nn.Module):
         self.log_spatial_coeff.requires_grad = True
         self.log_spatial_coeff_add.requires_grad = True
         self.log_spatial_theta.requires_grad = True
-    
+
     def hazard_beta_z_mode(self):
-        self.mode = 'beta_z'
+        self.mode = "beta_z"
         for parameter in self.parameters():
             parameter.requires_grad = False
         for parameter in self.dec_beta_z.parameters():
             parameter.requires_grad = True
-        if self.driver_genes is not None:
-            print("Keys in self.dec_gammas before accessing:", list(self.dec_gammas.keys()))
-            for parameter in self.dec_gammas.parameters():
-                parameter.requires_grad = True
+
+    def hazard_gamma_z_mode(self):
+        self.mode = "gamma_z"
+        for parameter in self.parameters():
+            parameter.requires_grad = False
+        for parameter in self.dec_gammas.parameters():
+            parameter.requires_grad = True
+
+    def hazard_joint_z_mode(self):
+        """Update beta and gamma hazard decoders together; keep all other blocks frozen."""
+        self.mode = "joint_z"
+        for parameter in self.parameters():
+            parameter.requires_grad = False
+        for parameter in self.dec_beta_z.parameters():
+            parameter.requires_grad = True
+        for parameter in self.dec_gammas.parameters():
+            parameter.requires_grad = True

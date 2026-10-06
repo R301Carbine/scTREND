@@ -1,5 +1,7 @@
+
 import torch
 import numpy as np
+
 
 class ScDataSet(torch.utils.data.Dataset):
     def __init__(self, x, xnorm_mat, batch_onehot):
@@ -16,8 +18,19 @@ class ScDataSet(torch.utils.data.Dataset):
         idx_batch_onehot = self.batch_onehot[idx]
         return (idx_x, idx_xnorm_mat, idx_batch_onehot)
 
-class ScDataManager():
-    def __init__(self, x_count, batch_size, batch_onehot):
+
+class ScDataManager:
+    def __init__(
+        self,
+        x_count,
+        batch_size,
+        batch_onehot,
+        *,
+        num_workers: int = 0,
+        pin_memory: bool = True,
+        persistent_workers: bool = False,
+        prefetch_factor: int | None = 2,
+    ):
         validation_ratio = 0.1
         test_ratio = 0.05
 
@@ -53,17 +66,66 @@ class ScDataManager():
         self.train_batch_onehot = batch_onehot[train_idx]
         self.validation_batch_onehot = batch_onehot[validation_idx]
         self.test_batch_onehot = batch_onehot[test_idx]
+
+        self.num_workers = int(num_workers)
+        self.pin_memory = bool(pin_memory)
+        self.persistent_workers = bool(persistent_workers and self.num_workers > 0)
+        self.prefetch_factor = None if self.num_workers == 0 else (2 if prefetch_factor is None else int(prefetch_factor))
+
         self.train_eds = ScDataSet(x_count[train_idx], xnorm_mat[train_idx], batch_onehot[train_idx])
-        self.train_loader = torch.utils.data.DataLoader(
-            self.train_eds, batch_size=batch_size, shuffle=True, num_workers=8, drop_last=True, pin_memory=True
+        self.train_loader = self._make_loader(batch_size)
+
+    def _normalize_batch_size(self, batch_size: int) -> int:
+        n_train = len(self.train_eds)
+        if n_train <= 0:
+            raise ValueError("Training dataset is empty.")
+        batch_size = int(batch_size)
+        if batch_size <= 0:
+            batch_size = n_train
+        return min(batch_size, n_train)
+
+    def _make_loader(self, batch_size: int):
+        batch_size = self._normalize_batch_size(batch_size)
+        drop_last = batch_size < len(self.train_eds)
+        kwargs = dict(
+            dataset=self.train_eds,
+            batch_size=batch_size,
+            shuffle=True,
+            num_workers=self.num_workers,
+            drop_last=drop_last,
+            pin_memory=self.pin_memory,
         )
+        if self.num_workers > 0:
+            kwargs["persistent_workers"] = self.persistent_workers
+            if self.prefetch_factor is not None:
+                kwargs["prefetch_factor"] = self.prefetch_factor
+        return torch.utils.data.DataLoader(**kwargs)
 
     def initialize_loader(self, batch_size):
-        self.train_loader = torch.utils.data.DataLoader(
-            self.train_eds, batch_size=batch_size, shuffle=True, num_workers=8, drop_last=True, pin_memory=True
-        )
+        self.train_loader = self._make_loader(batch_size)
 
-class BulkDataManager():
+    def initialize_hazard_loader(self, batch_size=1000):
+        """Use every reference cell for hazard fitting; preserve VAE splits."""
+        batch_size = int(batch_size)
+        if batch_size <= 0 or self.x_count.shape[0] == 0:
+            raise ValueError("Hazard batch size and reference-cell count must be positive.")
+        kwargs = dict(
+            dataset=ScDataSet(self.x_count, self.xnorm_mat, self.batch_onehot),
+            batch_size=batch_size,
+            shuffle=True,
+            num_workers=self.num_workers,
+            drop_last=False,
+            pin_memory=self.pin_memory,
+        )
+        if self.num_workers > 0:
+            kwargs["persistent_workers"] = self.persistent_workers
+            if self.prefetch_factor is not None:
+                kwargs["prefetch_factor"] = self.prefetch_factor
+        self.hazard_loader = torch.utils.data.DataLoader(**kwargs)
+        return self.hazard_loader
+
+
+class BulkDataManager:
     def __init__(self, bulk_count, survival_time, cutting_off_0_1):
         bulk_count = bulk_count.float()
         survival_time = survival_time.float()
@@ -95,7 +157,7 @@ class BulkDataManager():
             strata = bin_idx * 2 + censor_np.astype(int)
         else:
             upper = bin_idx * 2 + censor_np.astype(int)
-            n_bits = int(np.ceil(np.log2(snv_flag.max() + 1)))
+            n_bits = int(np.ceil(np.log2(snv_flag.max() + 1))) if snv_flag.max() > 0 else 1
             strata = (upper.astype(int) << n_bits) + snv_flag.astype(int)
 
         N = len(strata)
@@ -120,10 +182,11 @@ class BulkDataManager():
         self.validation_idx = torch.as_tensor(val_idx, dtype=torch.long)
         self.test_idx = torch.as_tensor(test_idx, dtype=torch.long)
         self.time_bin_idx = torch.as_tensor(bin_idx, dtype=torch.long)
-        
-class SpatialDataManager():
+
+
+class SpatialDataManager:
     def __init__(self, spatial_count):
-        spatial_count = spatial_count.float() 
-        spatial_norm_mat = torch.mean(spatial_count, dim=1).view(-1, 1) 
+        spatial_count = spatial_count.float()
+        spatial_norm_mat = torch.mean(spatial_count, dim=1).view(-1, 1)
         self.spatial_count = spatial_count
         self.spatial_norm_mat = spatial_norm_mat
