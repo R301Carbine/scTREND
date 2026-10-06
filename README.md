@@ -47,11 +47,11 @@ You can install scTREND via pip:
 
 ### Running scTREND
 In this tutorial, we present an application of scTREND using a melanoma single-cell RNA-seq dataset (GSE115978) together with a bulk RNA-seq dataset from TCGA-SKCM.
-BRAF mutation status is incorporated as a driver condition, and the survival time axis is discretized into four time intervals.
-Under this setting, both the coefficients shared across all patients and the coefficients specific to BRAF-mutant patients can be visualized as shown below.
+NRAS mutation status is incorporated as a driver condition, and the survival time axis is discretized into two time intervals.
+Under this setting, both the coefficients shared across all patients and the coefficients specific to NRAS-mutant patients can be visualized as shown below.
 
 ```python
-driver_genes = ["BRAF"]
+driver_genes = ["NRAS"]
 edges = [...]  # time bin edges used in training
 sc_adata, bulk_adata = workflow.scTREND_preprocess(sc_adata, bulk_adata,
      per=0.01, n_top_genes=5000, highly_variable="bulk", driver_genes=driver_genes)
