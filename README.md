@@ -69,7 +69,7 @@ sc_adata, bulk_adata, model_params_dict, spatial_adata, exp = workflow.run_scTRE
 ```
 
 <p align="center">
-  <img src="SKCM_umap_celltype.png" alt="Cell type" width="1100">
+  <img src="SKCM_umap_celltype.pdf" alt="Cell type" width="1100">
 </p>
 
 <p align="center">
