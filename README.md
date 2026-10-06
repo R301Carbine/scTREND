@@ -7,7 +7,7 @@ This enables the computation of patient-level risk scores and the identification
 Teppei Shimamura's lab, Institute of Science Tokyo, Tokyo, Japan
 
 <p align="center">
-  <img src="Overview_git.png" alt="Overview of the scTCHM framework" width="1100">
+  <img src="Overview_git.pdf" alt="Overview of the scTCHM framework" width="1100">
 </p>
 
 ## Model architecture
@@ -69,7 +69,7 @@ sc_adata, bulk_adata, model_params_dict, spatial_adata, exp = workflow.run_scTRE
 ```
 
 <p align="center">
-  <img src="SKCM_umap_celltype.pdf" alt="Cell type" width="1100">
+  <img src="SKCM_umap_celltype.png" alt="Cell type" width="1100">
 </p>
 
 <p align="center">
