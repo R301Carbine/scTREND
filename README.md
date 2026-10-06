@@ -7,7 +7,7 @@ This enables the computation of patient-level risk scores and the identification
 Teppei Shimamura's lab, Institute of Science Tokyo, Tokyo, Japan
 
 <p align="center">
-  <img src="Overview_git.pdf" alt="Overview of the scTCHM framework" width="1100">
+  <img src="Overview_git.png" alt="Overview of the scTREND framework" width="1100">
 </p>
 
 ## Model architecture
@@ -77,7 +77,7 @@ sc_adata, bulk_adata, model_params_dict, spatial_adata, exp = workflow.run_scTRE
 </p>
 
 <p align="center">
-  <img src="umap_gamma_BRAF_per_bin.png" alt="BRAF-specific contribution (gamma)" width="1100">
+  <img src="umap_gamma_NRAS_per_bin.png" alt="NRAS-specific contribution (gamma)" width="1100">
 </p>
 
 
