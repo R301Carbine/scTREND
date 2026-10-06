@@ -60,6 +60,7 @@ driver_bulk_adata.layers["SNV"] = ...  # samples × driver_genes (0:wild-type 1:
 sc_adata, bulk_adata, model_params_dict, spatial_adata, exp = workflow.run_scTREND(
      sc_adata, bulk_adata,
      param_save_path="scTREND.pt",
+     warm_path=None,
      epoch=10000,
      batch_key="samples",
      driver_genes=driver_genes,
